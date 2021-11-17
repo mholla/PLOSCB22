@@ -1,0 +1,253 @@
+*Heading
+Square_FiberGrid
+**
+**	UNITS:	Length - meters, Time - sec, Angle - radians,
+**		Temperature - Kelvin, Force - Newtons,
+**		Stress - Newton/meter^2 = Pa, Mass - kilograms,
+**		Density - kg/meter^3, Conductivity - Watt/m-K,
+**		Specific Heat - J/m^3-K, Energy - Joules,
+**	        Chemical potential - Joules/mole,
+**		Fluid content - moles/volume
+**
+**
+**
+** Shuolun Wang, 2021, ND 
+** 
+**  
+************************************************************************
+**			PARAMETERS
+************************************************************************
+*Parameter
+**
+**	SIMULATION PARAMETERS 
+**
+** strain rate  -- this is a shear rate, but we still call it edot
+edot = 1.e-3
+**
+** final strain
+ef = 1.0
+**
+** initial length of element
+l0 = 1.e-3
+**
+**
+** velocity for this rate
+vel_mov = edot*l0
+**
+** loading time
+time = ef/edot
+**
+**
+**
+**
+**	MATERIAL PROPERTIES
+** smooth parameter for neuron cell migration  
+alpha = 0.1
+**
+** smooth parameter for source term 
+alpha_Gc = 20.0
+**alpha_Gc = 100.0
+**
+** smooth parameter for velocity 
+alpha_v = 20.0
+**alpha_v = 100.0
+**
+** smooth parameter for diffusivity 
+alpha_d = 100.0
+** 
+** smooth parameter for stiffness 
+alpha_mu = 100.0
+**alpha_mu = 50.0
+**
+** smooth parameter for growth parameter 
+alpha_k = 20.0
+**
+**
+** base value for source term
+Gc = 0.0
+**
+** base value for velocity
+vel = 0.2
+***vel = 0.01
+**
+** diffusivity
+diff = 0.01
+***diff = 0.0005
+**
+** cell migration threshold 
+c0 = 400.0 
+***c0 = 100.0 
+**
+** shape parameter for growth
+k_s = 0.001
+betak = 1.0
+k_c_normal = k_s*betak
+k_c_para = k_s/betak
+alpha_normal = 1.0 
+alpha_para = 1.0
+**
+** mechanical parameter(Pa) 
+lam_s = 930.0
+mu_s = 100.0
+**
+** stiffness ratio 
+betaE = 10.0 
+lam_c = lam_s*betaE
+mu_c = mu_s*betaE
+**
+** delta function parameter for Gc as function of time
+epsilon1 = 20.0
+**
+**
+**
+**	ELEMENT PROPERTIES
+**
+** number of volume integration points
+nInt = 8
+**
+** number of local sdv's used in the solution
+nlSdv = 12
+**
+** number of global sdv's used for visualization
+ngSdv = 12
+**
+** number of element variables
+nVars = nInt*nlSdv
+**
+**
+**	BOUNDARY AND INITIAL CONDITIONS
+**
+**
+** initial neuron cell density  
+initc = 0.0
+************************************************************************
+**		MODEL DEFINITION
+************************************************************************
+*Node,nset=nAll
+1,0.,0.,0.
+2,<l0>,0.,0.
+3,<l0>,<l0>,0.
+4,0.,<l0>,0.
+5,0.,0.,<l0>
+6,<l0>,0.,<l0>
+7,<l0>,<l0>,<l0>
+8,0.,<l0>,<l0>
+*User Element,Nodes=8,Type=U3,Iproperties=3,Properties=20,Coordinates=3,Variables=<nVars>,Unsymm
+1,2,3,11
+*Element, type=U3, elset=Elall
+1,1,2,3,4,5,6,7,8
+**
+** Dummy mesh
+**
+*Element, type=C3D8, elset=ElDummy
+10001,1,2,3,4,5,6,7,8
+**
+*NSET,NSET=BOT
+1,2,3,4
+*NSET,NSET=TOP
+5,6,7,8
+*NSET,NSET=TOP1
+6,7,8
+*BOUNDARY
+BOT,1,3
+TOP,1
+TOP,3
+*EQUATION
+2
+TOP1,2,1.0,5,2,-1.0
+*NSET,NSET=REF
+5
+** make a dummy element which is not connected to anything with CPE4T
+**  just so that we can have the coupled thermal-displacement step
+**
+*Node
+999996,  0.0, 0.0
+999997,  .000001, 0.0
+999998,  .000001, .000001
+999999,  0.0, .000001
+*Nset, nset=extraElement
+999996,999997,999998,999999
+*Element, Type=CPE4T
+999999,999996,999997,999998,999999
+*Elset,elset=extraElement
+999999
+**
+**
+************************************************************************
+**			MATERIAL DEFINITION
+************************************************************************
+**
+** Material properties for gel material
+**
+*uel property,elset=Elall
+<alpha>,<alpha_Gc>,<alpha_v>,<alpha_d>,<alpha_mu>,<alpha_k>,<Gc>,<vel>,
+<diff>,<c0>,<k_s>,<k_c_normal>,<k_c_para>,<alpha_normal>,<alpha_para>,<lam_c>,
+<lam_s>,<mu_c>,<mu_s>,<epsilon1>,<nlSdv>,<ngSdv>,<nInt>
+**
+** Dummy mesh material properties
+**
+*Solid section, elset=extraElement, material=Material-1
+*Solid section, elset=ElDummy, material=Material-2
+**
+*Material, name=Material-1
+*Elastic
+1.e-20
+*Conductivity
+1.0
+*Density
+1.0
+*Specific heat
+1.0
+**
+*Material, name=Material-2
+*User output variables
+<ngSdv>
+*Elastic
+1.e-20
+**
+************************************************************************
+**			INITIAL CONDITIONS
+************************************************************************
+**
+*Initial conditions, type=temperature
+nAll,<initc>,
+**
+*Initial conditions, type=temperature
+extraElement,0.0
+**
+************************************************************************
+**			AMPLITUDE DEFINITION
+************************************************************************
+**
+************************************************************************
+**			STEP DEFINITION
+************************************************************************
+*Step, Name=shear, nlgeom=yes, inc=100000
+*Coupled temperature-displacement, deltmx=100.0
+** *Coupled temperature-displacement, steady state
+1.0,<time>,1.e-8,25.0
+*Controls, Parameters=Time Incrementation
+,,,,,,,10,,,,,,
+**
+**
+*Boundary
+nAll,11,11,0.0
+**
+**
+*BOUNDARY,TYPE=VELOCITY
+REF,2,2,<vel_mov>
+**
+*Boundary
+extraElement,encastre
+extraElement,11,11,0.0
+**
+*Output, field, frequency=1
+*node output, nset=nall
+u,nt
+*element output, elset=ElDummy 
+le,uvarm
+**
+*Output, history, frequency=1
+*Node Output, nset=REF
+U2,
+*END STEP
