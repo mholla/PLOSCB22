@@ -4,7 +4,7 @@ This code reproduces the results of ``Orchestrated neuronal migration and cortic
 
 ## in silico computational simulations
 
-Input files and Abaqus Standard user-defined element subroutines are provided for the reproduction of all the simulations included in the paper. 
+Abaqus input files and user-defined element subroutines are provided for the reproduction of all the simulations included in the paper. 
 
 ## ferret brain sections 
 
